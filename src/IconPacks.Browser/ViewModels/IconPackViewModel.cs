@@ -20,6 +20,7 @@ using JetBrains.Annotations;
 using MahApps.Metro.Controls;
 using MahApps.Metro.Controls.Dialogs;
 using MahApps.Metro.IconPacks;
+using MaterialDesignThemes.Wpf;
 using Microsoft.Win32;
 using IO = System.IO;
 
@@ -47,6 +48,7 @@ namespace IconPacks.Browser.ViewModels
             SaveAsPngCommand = new SimpleCommand((_) => SaveAsBitmapExecute(new PngBitmapEncoder()), (_) => SelectedIcon is not null);
             SaveAsJpegCommand = new SimpleCommand((_) => SaveAsBitmapExecute(new JpegBitmapEncoder()), (_) => SelectedIcon is not null);
             SaveAsBmpCommand = new SimpleCommand((_) => SaveAsBitmapExecute(new BmpBitmapEncoder()), (_) => SelectedIcon is not null);
+            SaveAllAsSvgCommand = new SimpleCommand((_) => SaveAllAsSvg_Execute(), (_) => Icons is not null);
         }
 
         public IconPackViewModel(MainViewModel mainViewModel, Type enumType, Type packType, IDialogCoordinator dialogCoordinator)
@@ -265,6 +267,86 @@ namespace IconPacks.Browser.ViewModels
             await progress.CloseAsync();
         }
 
+
+        public ICommand SaveAllAsSvgCommand { get; }
+        private async void SaveAllAsSvg_Execute()
+        {
+            var progress = await dialogCoordinator.ShowProgressAsync(MainViewModel, "Export", "Saving all icons as SVG-files");
+            progress.SetIndeterminate();
+            try
+            {
+                var fileSaveDialog = new SaveFileDialog()
+                {
+                    AddExtension = true,
+                    DefaultExt = "svg",
+                    FileName = $"{SelectedIcon.IconPackName}-{SelectedIcon.Name}",
+                    Filter = "SVG Drawing (*.svg)|*.svg",
+                    OverwritePrompt = true
+                };
+
+                if (fileSaveDialog.ShowDialog() == true )
+                {
+                    foreach (IconViewModel icon  in Icons)
+                    {
+                        var iconControl = icon.GetPackIconControlBase();
+
+                        iconControl.BeginInit();
+                        iconControl.Width = Settings.Default.IconPreviewSize;
+                        iconControl.Height = Settings.Default.IconPreviewSize;
+                        iconControl.EndInit();
+                        iconControl.ApplyTemplate();
+
+                        var iconPath = iconControl.FindChild<Path>();
+
+                        var bBox = iconPath.Data.Bounds;
+
+                        var svgSize = Math.Max(bBox.Width, bBox.Height);
+                        var scaleFactor = Settings.Default.IconPreviewSize / svgSize;
+                        var T = iconPath.LayoutTransform.Value;
+
+                        T.Translate(-bBox.Left - (T.M11 < 0 ? bBox.Width : 0) + Math.Sign(T.M11) * (svgSize - bBox.Width) / 2,
+                            -bBox.Top - (T.M22 < 0 ? bBox.Height : 0) + Math.Sign(T.M22) * (svgSize - bBox.Height) / 2);
+                        T.Scale(scaleFactor, scaleFactor);
+
+                        var transform = string.Join(",", new[]
+                        {
+                        T.M11.ToString(CultureInfo.InvariantCulture),
+                        T.M21.ToString(CultureInfo.InvariantCulture),
+                        T.M12.ToString(CultureInfo.InvariantCulture),
+                        T.M22.ToString(CultureInfo.InvariantCulture),
+                        (Math.Sign(T.M11) * T.OffsetX).ToString(CultureInfo.InvariantCulture),
+                        (Math.Sign(T.M22) * T.OffsetY).ToString(CultureInfo.InvariantCulture)
+                    });
+
+                        var parameters = new ExportParameters(icon)
+                        {
+                            FillColor = iconPath.Fill is not null ? Settings.Default.IconForeground.ToString(CultureInfo.InvariantCulture).Remove(1, 2) : "none", // We need to remove the alpha channel for svg
+                            Background = Settings.Default.IconBackground.ToString(CultureInfo.InvariantCulture).Remove(1, 2),
+                            PathData = iconControl.Data,
+                            StrokeColor = iconPath.Stroke is not null ? Settings.Default.IconForeground.ToString(CultureInfo.InvariantCulture).Remove(1, 2) : "none", // We need to remove the alpha channel for svg
+                            StrokeWidth = iconPath.Stroke is null ? "0" : (scaleFactor * iconPath.StrokeThickness).ToString(CultureInfo.InvariantCulture),
+                            StrokeLineCap = iconPath.StrokeEndLineCap.ToString().ToLower(),
+                            StrokeLineJoin = iconPath.StrokeLineJoin.ToString().ToLower(),
+                            TransformMatrix = transform
+                        };
+
+                        var svgFileTemplate = ExportHelper.SvgFileTemplate;
+
+                        var svgFileContent = ExportHelper.FillTemplate(svgFileTemplate, parameters);
+                        string Path = System.IO.Path.GetDirectoryName(fileSaveDialog.FileName);
+                        using IO.StreamWriter file = new IO.StreamWriter(Path + "\\" + icon.Name + ".svg");
+                        await file.WriteAsync(svgFileContent);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                await dialogCoordinator.ShowMessageAsync(MainViewModel, "Error", e.Message);
+            }
+
+            await progress.CloseAsync();
+
+        }
         public ICommand SaveAsWpfCommand { get; }
 
         private async void SaveAsWpf_Execute()

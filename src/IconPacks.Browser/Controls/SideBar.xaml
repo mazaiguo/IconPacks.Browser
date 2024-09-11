@@ -240,6 +240,7 @@
                         <Button Command="{Binding SaveAsPngCommand}" Content="Save as Png" />
                         <Button Command="{Binding SaveAsJpegCommand}" Content="Save as Jpeg" />
                         <Button Command="{Binding SaveAsBmpCommand}" Content="Save as Bmp" />
+                        <Button Command="{Binding SaveAllAsSvgCommand}" Content="SaveAll as svg" />
                     </StackPanel>
                 </Expander>
             </StackPanel>

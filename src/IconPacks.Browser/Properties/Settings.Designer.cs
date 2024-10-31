@@ -37,7 +37,7 @@ namespace IconPacks.Browser.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("48")]
+        [global::System.Configuration.DefaultSettingValueAttribute("64")]
         public double IconPreviewSize {
             get {
                 return ((double)(this["IconPreviewSize"]));
@@ -49,7 +49,7 @@ namespace IconPacks.Browser.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("#FF000000")]
+        [global::System.Configuration.DefaultSettingValueAttribute("#FF00FFFF")]
         public global::System.Windows.Media.Color IconForeground {
             get {
                 return ((global::System.Windows.Media.Color)(this["IconForeground"]));
@@ -61,7 +61,7 @@ namespace IconPacks.Browser.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("#FFFFFFFF")]
+        [global::System.Configuration.DefaultSettingValueAttribute("#FF424C58")]
         public global::System.Windows.Media.Color IconBackground {
             get {
                 return ((global::System.Windows.Media.Color)(this["IconBackground"]));

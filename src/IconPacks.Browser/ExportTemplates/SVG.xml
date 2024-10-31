@@ -22,6 +22,8 @@ Iconpack-License:	@IconPackLicense
 <svg xmlns="http://www.w3.org/2000/svg"
      width="@PageWidth"
      height="@PageHeight">
+ <rect width="@PageWidth"
+     height="@PageHeight" fill="@Background" />
     <path d="@PathData"
           style="fill:@FillColor;
                  stroke:@StrokeColor

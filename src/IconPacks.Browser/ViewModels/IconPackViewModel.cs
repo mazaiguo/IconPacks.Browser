@@ -49,6 +49,7 @@ namespace IconPacks.Browser.ViewModels
             SaveAsJpegCommand = new SimpleCommand((_) => SaveAsBitmapExecute(new JpegBitmapEncoder()), (_) => SelectedIcon is not null);
             SaveAsBmpCommand = new SimpleCommand((_) => SaveAsBitmapExecute(new BmpBitmapEncoder()), (_) => SelectedIcon is not null);
             SaveAllAsSvgCommand = new SimpleCommand((_) => SaveAllAsSvg_Execute(), (_) => Icons is not null);
+            SaveAllAsBmpCommand = new SimpleCommand((_) => SaveAllAsBmp_Execute(), (_) => Icons is not null);
         }
 
         public IconPackViewModel(MainViewModel mainViewModel, Type enumType, Type packType, IDialogCoordinator dialogCoordinator)
@@ -336,6 +337,81 @@ namespace IconPacks.Browser.ViewModels
                         string Path = System.IO.Path.GetDirectoryName(fileSaveDialog.FileName);
                         using IO.StreamWriter file = new IO.StreamWriter(Path + "\\" + icon.Name + ".svg");
                         await file.WriteAsync(svgFileContent);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                await dialogCoordinator.ShowMessageAsync(MainViewModel, "Error", e.Message);
+            }
+
+            await progress.CloseAsync();
+
+        }
+
+
+        public ICommand SaveAllAsBmpCommand { get; }
+        private async void SaveAllAsBmp_Execute()
+        {
+            var progress = await dialogCoordinator.ShowProgressAsync(MainViewModel, "Export", "Saving icons as bitmap image");
+            progress.SetIndeterminate();
+            try
+            {
+                var fileSaveDialog = new SaveFileDialog()
+                {
+                    AddExtension = true,
+                    DefaultExt = "bmp",
+                    FileName = $"{SelectedIcon.IconPackName}-{SelectedIcon.Name}",
+                    Filter = "(*.bmp)|*.bmp|(*.png)|*.png|(*.jpg)|*.jpg|(All Files)|*.*",
+                    OverwritePrompt = true
+                };
+
+                if (fileSaveDialog.ShowDialog() == true)
+                {
+                    foreach (IconViewModel icon in Icons)
+                    {
+                        var canvas = new Canvas
+                        {
+                            Width = Settings.Default.IconPreviewSize,
+                            Height = Settings.Default.IconPreviewSize,
+                            Background = new SolidColorBrush(Settings.Default.IconBackground)
+                        };
+                        BitmapEncoder encoder = new BmpBitmapEncoder();
+                        fileSaveDialog.Filter = encoder switch
+                        {
+                            PngBitmapEncoder => "Png-File (*.png)|*.png",
+                            JpegBitmapEncoder => "Jpeg-File (*.jpg)|*.jpg",
+                            BmpBitmapEncoder => "Bmp-File (*.bmp)|*.bmp",
+                            _ => fileSaveDialog.Filter
+                        };
+
+                        var packIconControl = new PackIconControl();
+                        packIconControl.BeginInit();
+                        packIconControl.Kind = icon.Value as Enum;
+                        packIconControl.Width = Settings.Default.IconPreviewSize;
+                        packIconControl.Height = Settings.Default.IconPreviewSize;
+                        packIconControl.Foreground = new SolidColorBrush(Settings.Default.IconForeground);
+
+                        packIconControl.EndInit();
+                        packIconControl.ApplyTemplate();
+
+                        canvas.Children.Add(packIconControl);
+
+                        var size = new Size(Settings.Default.IconPreviewSize, Settings.Default.IconPreviewSize);
+                        canvas.Measure(size);
+                        canvas.Arrange(new Rect(size));
+
+                        var renderTargetBitmap = new RenderTargetBitmap((int)size.Width, (int)size.Height, 96, 96, PixelFormats.Pbgra32);
+                        renderTargetBitmap.Render(canvas);
+
+                        encoder.Frames.Add(BitmapFrame.Create(renderTargetBitmap));
+
+                        string Path = System.IO.Path.GetDirectoryName(fileSaveDialog.FileName);
+                        string fileext = System.IO.Path.GetExtension(fileSaveDialog.FileName);
+                        string FileName = Path + "\\" + icon.Name + fileext;
+
+                        using var fileStream = new IO.FileStream(FileName, IO.FileMode.Create);
+                        encoder.Save(fileStream);
                     }
                 }
             }
